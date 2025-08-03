@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Koog Voice Bot Demo</title>
+  <style>
+    body { font-family: sans-serif; margin: 2em; }
+    #output { border: 1px solid #ccc; padding: 1em; height: 200px; overflow-y: auto; }
+  </style>
+</head>
+<body>
+  <h1>Koog Voice Bot Demo</h1>
+  <textarea id="prompt" rows="4" cols="50" placeholder="Say something..."></textarea><br/>
+  <label>Voice Mode:
+    <select id="voiceMode">
+      <option value="off" selected>off</option>
+      <option value="client">client</option>
+      <option value="server">server</option>
+    </select>
+  </label>
+  <button id="start">Stream</button>
+  <div id="latency">TTFT: <span id="ttft">-</span> ms, Tokens/sec: <span id="rate">-</span></div>
+  <pre id="output"></pre>
+  <script>
+    const btn = document.getElementById('start');
+    const out = document.getElementById('output');
+    const ttftEl = document.getElementById('ttft');
+    const rateEl = document.getElementById('rate');
+    btn.onclick = () => {
+      out.textContent = '';
+      const prompt = document.getElementById('prompt').value;
+      const mode = document.getElementById('voiceMode').value;
+      const start = Date.now();
+      let first = true;
+      let tokens = 0;
+      const es = new EventSource(`/api/v1/stream?prompt=${encodeURIComponent(prompt)}&voiceMode=${mode}`);
+      es.addEventListener('token', e => {
+        if (first) {
+          ttftEl.textContent = Date.now() - start;
+          first = false;
+        }
+        tokens++;
+        out.textContent += e.data;
+      });
+      es.addEventListener('done', e => {
+        const duration = Date.now() - start;
+        rateEl.textContent = (tokens / (duration/1000)).toFixed(2);
+        es.close();
+      });
+    };
+  </script>
+</body>
+</html>
